@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.uv-cache/
+uv.lock
+
+# Never commit the data drop or any artifact derived from it.
+data/*.jsonl
+data/*.json
+schema.json
+field_docs.json
+alias_map.json
