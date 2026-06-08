@@ -1,0 +1,20 @@
+# MongoDB 7 for the Industflow AI layer.
+#   docker compose up -d   → Mongo on localhost:27017, database `mip`
+# Mongo 7 is required for $median / $percentile used by some aggregations.
+services:
+  mongo:
+    image: mongo:7
+    container_name: industflow-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongo_data:

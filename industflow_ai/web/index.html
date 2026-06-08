@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Industflow AI</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="vendor/chart.umd.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">◧</span>
+      <div>
+        <h1>Industflow AI</h1>
+        <p class="tagline">Production intelligence — ask in plain language</p>
+      </div>
+    </div>
+    <div class="status" id="status">
+      <span class="dot" id="dot-mongo" title="MongoDB">DB</span>
+      <span class="dot" id="dot-ollama" title="Ollama">LLM</span>
+      <span class="model" id="model-name">—</span>
+    </div>
+    <label class="charts-toggle">
+      <input type="checkbox" id="charts-toggle" />
+      <span>Charts</span>
+    </label>
+  </header>
+
+  <main class="layout" id="layout">
+    <!-- Chat -->
+    <section class="chat-pane">
+      <div class="messages" id="messages">
+        <div class="msg assistant">
+          <div class="bubble">
+            Hi — I can answer questions about your production data. Try a chip below,
+            or ask anything (e.g. <em>"which steps have the worst first pass yield with at least 500 attempts?"</em>).
+          </div>
+        </div>
+      </div>
+
+      <div class="quick" id="quick">
+        <button class="chip" data-q="What is the overall scrap rate?">Overall scrap rate</button>
+        <button class="chip" data-q="Which defect codes cause the most losses?">Top defects</button>
+        <button class="chip" data-q="Which 5 steps have the worst first pass yield among steps with at least 500 attempts?">Worst first-pass yield</button>
+        <button class="chip" data-q="Compare the most recent shifts by output fulfillment.">Recent shifts</button>
+        <button class="chip report" data-report="trend">📄 Trend report</button>
+        <button class="chip report" data-report="shift">📄 Shift report</button>
+      </div>
+
+      <form class="composer" id="composer">
+        <textarea id="input" rows="1" placeholder="Ask about production data…" autocomplete="off"></textarea>
+        <button type="submit" id="send">Send</button>
+      </form>
+    </section>
+
+    <!-- Charts -->
+    <aside class="charts-pane" id="charts-pane" hidden>
+      <div class="charts-head">
+        <h2>KPIs</h2>
+        <button class="refresh" id="refresh-charts" title="Refresh">⟳</button>
+      </div>
+      <div class="card"><h3>Daily scrap rate</h3><canvas id="chart-scrap"></canvas></div>
+      <div class="card"><h3>Top defect codes</h3><canvas id="chart-defects"></canvas></div>
+      <div class="card"><h3>Worst first-pass yield</h3><canvas id="chart-fpy"></canvas></div>
+      <div class="card"><h3>Output by shift (created vs expected)</h3><canvas id="chart-shifts"></canvas></div>
+    </aside>
+  </main>
+</body>
+</html>

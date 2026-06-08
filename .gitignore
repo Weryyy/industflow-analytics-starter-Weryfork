@@ -1,5 +1,9 @@
 .venv/
+.env
 __pycache__/
+
+# Personal defense / walkthrough notes — not for the repo
+DEFENSE.md
 *.pyc
 *.egg-info/
 .uv-cache/
@@ -9,5 +13,8 @@ uv.lock
 data/*.jsonl
 data/*.json
 schema.json
+SCHEMA.md
+RECEIVER.md
+MANIFEST.json
 field_docs.json
 alias_map.json

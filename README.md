@@ -56,6 +56,14 @@ uv run mip summary
 
 That's it. From here, run any of the example scripts.
 
+## AI layer
+
+On top of this data layer there's an optional **AI intelligence layer**
+(`industflow_ai`): natural-language Q&A over the data, an automatic shift/trend
+report narrator, a scheduler for continuous analysis, and an audit log — all
+running locally (Ollama + LangChain + FastAPI). See **[AI_LAYER.md](AI_LAYER.md)**
+to set it up (`uv sync --extra ai`).
+
 ## Example queries
 
 Every script in `examples/` is independently runnable and prints a table.
