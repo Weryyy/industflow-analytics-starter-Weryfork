@@ -56,13 +56,35 @@ uv run mip summary
 
 That's it. From here, run any of the example scripts.
 
+> **No local MongoDB?** A `docker-compose.yml` is included — `docker compose up -d`
+> starts MongoDB 7 on `localhost:27017`. **No data drop yet?**
+> `uv run python tools/gen_synthetic.py` generates a schema-conformant synthetic
+> slice you can import and explore until the real `.jsonl` files arrive.
+
 ## AI layer
 
-On top of this data layer there's an optional **AI intelligence layer**
-(`industflow_ai`): natural-language Q&A over the data, an automatic shift/trend
-report narrator, a scheduler for continuous analysis, and an audit log — all
-running locally (Ollama + LangChain + FastAPI). See **[AI_LAYER.md](AI_LAYER.md)**
-to set it up (`uv sync --extra ai`).
+On top of this data layer there's an **AI intelligence layer** (`industflow_ai`)
+that turns the data slice into a production-intelligence assistant — all running
+**locally** (Ollama + LangChain + FastAPI), no cloud, no per-token cost:
+
+- **Natural-language Q&A** — ask questions in plain language; the agent calls
+  read-only tools (the aggregations in `queries.py`) plus a sandboxed
+  `mongo_aggregate` escape hatch, and answers with concrete figures.
+- **Automatic report narrator** — shift and trend briefings in plain language.
+- **Continuous analysis** — a scheduler generates reports after each shift and
+  nightly.
+- **Auditable** — every answer and report is logged to `ai.audit`.
+- **Web UI** — a single-page chat with a KPI charts panel, served at `/`.
+
+```bash
+uv sync --extra ai                                  # AI dependencies
+uv run uvicorn industflow_ai.api.main:app           # API + scheduler + UI
+# → web UI at http://localhost:8000/  (Swagger at /docs)
+```
+
+Needs Docker (MongoDB) and [Ollama](https://ollama.com) ≥ 0.24 with the
+`qwen3:14b-q4_K_M` model. Full setup, endpoints, and safety model in
+**[AI_LAYER.md](AI_LAYER.md)**.
 
 ## Example queries
 
@@ -133,3 +155,10 @@ is the same content laid out for humans.
   in a way that broke Extended JSON. Re-fetch from the sender.
 - **`$median` not recognized** — needs MongoDB 7.0+. Drop the `p50Sec` line
   in `industflow_starter/queries.py::step_cycle_time` if you're on older Mongo.
+- **AI layer is slow (Ollama on CPU)** — `curl localhost:11434/api/ps` and check
+  `size_vram` is non-zero. New NVIDIA GPUs (RTX 50-series / Blackwell) need
+  Ollama ≥ 0.24; older builds silently fall back to CPU. If the CUDA backend
+  goes missing after an auto-update, reinstall Ollama to restore it.
+- **Garbled non-ASCII in a client (e.g. Czech step names)** — the API serves
+  UTF-8; PowerShell 5.1 mis-decodes unless the console is UTF-8
+  (`[Console]::OutputEncoding = [Text.Encoding]::UTF8`). Browsers render it fine.
