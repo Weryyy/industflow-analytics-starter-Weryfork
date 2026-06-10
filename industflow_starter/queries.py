@@ -5,7 +5,6 @@ to feed into pandas / matplotlib if the receiver wants charts.
 """
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
 
 from pymongo.database import Database

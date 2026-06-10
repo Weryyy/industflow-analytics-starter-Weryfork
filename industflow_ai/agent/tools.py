@@ -11,10 +11,13 @@ import json
 
 from bson import ObjectId
 from langchain_core.tools import tool
+from pymongo.errors import PyMongoError
 
 from industflow_starter import queries
+from ..audit.log import record
+from ..config import READABLE_COLLECTIONS
 from ..mongo import get_db
-from ..safety.sandbox import SandboxError, safe_aggregate
+from ..safety.sandbox import SandboxError, execute_pipeline, validate_pipeline
 from ..serialize import jsonable
 
 
@@ -98,20 +101,34 @@ def downtime_by_reason() -> str:
     return _dump(queries.downtime_by_reason(get_db()))
 
 
-@tool
-def mongo_aggregate(collection: str, pipeline: list) -> str:
-    """Run a read-only MongoDB aggregation for questions the other tools don't cover.
+# Built from config so the collection list can't drift from the sandbox.
+_MONGO_AGGREGATE_DESC = (
+    "Run a read-only MongoDB aggregation for questions the other tools don't "
+    "cover. Use ONLY when no predefined tool fits. `collection` must be one "
+    f"of: {', '.join(sorted(READABLE_COLLECTIONS))}. `pipeline` is a standard "
+    "aggregation pipeline (list of stage dicts). Write stages "
+    "($out/$merge/$function/$where) are rejected and results are capped. "
+    "Always include deleted:false in your $match."
+)
 
-    Use ONLY when no predefined tool fits. `collection` must be one of:
-    products, products.steps, products.defect_history, workshifts, lines,
-    stations, defectcode. `pipeline` is a standard aggregation pipeline (list of
-    stage dicts). Write stages ($out/$merge/$function/$where) are rejected and
-    results are capped. Always include deleted:false in your $match.
-    """
+
+@tool(description=_MONGO_AGGREGATE_DESC)
+def mongo_aggregate(collection: str, pipeline: list) -> str:
+    requested = {"collection": collection, "pipeline": jsonable(pipeline)}
     try:
-        rows = safe_aggregate(get_db(), collection, pipeline)
+        sanitized = validate_pipeline(collection, pipeline)
     except SandboxError as e:
+        record("mongo_aggregate", input=requested,
+               result_summary={"rejected": str(e)})
         return json.dumps({"error": str(e)})
+    try:
+        rows = execute_pipeline(get_db(), collection, sanitized)
+    except PyMongoError as e:
+        record("mongo_aggregate", input=requested,
+               pipelineExecuted=sanitized, result_summary={"error": str(e)})
+        return json.dumps({"error": str(e)})
+    record("mongo_aggregate", input=requested,
+           pipelineExecuted=sanitized, result_summary={"rows": len(rows)})
     return _dump(rows)
 
 

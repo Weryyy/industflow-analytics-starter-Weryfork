@@ -22,6 +22,7 @@ from ..config import (
     TREND_BASELINE_DAYS,
 )
 from ..agent.llm import get_chat_model
+from ..insights.anomaly import scrap_rate_anomalies
 from ..mongo import get_db
 from ..serialize import jsonable
 
@@ -29,7 +30,7 @@ _LANG_NAME = {"es": "Spanish", "en": "English"}
 
 _SYSTEM = (
     "You are a production-intelligence analyst for a manufacturing line. "
-    "Write a concise (2-3 paragraph) shift/trend briefing from the aggregated "
+    "Write a concise (2-3 paragraph) briefing from the aggregated "
     "JSON metrics provided. Rules: use ONLY the numbers given; do not invent "
     "values; quote concrete figures; keep the tone advisory ('worth checking', "
     "'may warrant review'), never prescriptive or alarmist; the AI does not make "
@@ -126,6 +127,25 @@ def build_trend_report(top_n: int = 10, min_volume: int = 100) -> dict:
         "baselineDays": TREND_BASELINE_DAYS,
     }
     return _narrate(context, report_type="trend", scope={"windowDays": TREND_BASELINE_DAYS})
+
+
+def build_anomaly_report(detection: dict | None = None) -> dict:
+    """Briefing over the statistical scrap-rate anomaly check.
+
+    The detection itself is deterministic (insights.anomaly); the LLM only
+    narrates the findings — or states that nothing unusual was flagged.
+    """
+    db = get_db()
+    if detection is None:
+        detection = scrap_rate_anomalies(db)
+    series = queries.daily_scrap_rate(db)
+    context = {
+        "anomalyDetection": detection,
+        "recentScrapTrend": jsonable(series[-14:]),
+    }
+    return _narrate(context, report_type="anomaly",
+                    scope={"zThreshold": detection.get("zThreshold"),
+                           "findings": len(detection.get("findings", []))})
 
 
 def recent_reports(limit: int = 20, report_type: str | None = None) -> list[dict]:

@@ -17,10 +17,13 @@ no per-token cost, full data privacy (the project brief's "local-first" goal).
 FastAPI (industflow_ai/api)        REST: /ask /report /reports /audit /health
   ├── agent/      LangChain create_agent + ChatOllama; tools wrap queries.py
   │               + mongo_aggregate (sandboxed read-only escape hatch)
-  ├── narrator/   aggregations -> LLM -> advisory briefing (shift | trend)
+  ├── narrator/   aggregations -> LLM -> advisory briefing (shift | trend | anomaly)
+  ├── insights/   deterministic anomaly detection (scrap-rate z-score, no LLM)
   ├── safety/     pipeline allow-list, forced $limit, timeout (read-only)
-  ├── audit/      ai.audit — every generation/query recorded
-  ├── scheduler/  APScheduler — shift reports (14/22/06) + nightly trend
+  ├── audit/      ai.audit — every answer, tool call (with args) and every
+  │               mongo_aggregate pipeline (requested + sanitized, incl. rejections)
+  ├── scheduler/  APScheduler — shift reports (14/22/06), nightly trend,
+  │               daily anomaly check (narrates a report only when flagged)
   ├── config.py   all settings, env-overridable
   └── mongo.py    pooled DB handle (wraps industflow_starter.db)
 
@@ -80,9 +83,10 @@ language (`REPORT_LANG=en|es`), sandbox limits, baseline windows.
 | GET    | `/`        | web UI (redirects to `/ui/`) |
 | GET    | `/health`  | Mongo + Ollama reachability, model loaded? |
 | POST   | `/ask`     | `{ "question": "..." }` → agent answer + tools used |
-| POST   | `/report`  | `{ "type": "shift"\|"trend", "line_id"?: "..." }` → briefing |
+| POST   | `/report`  | `{ "type": "shift"\|"trend"\|"anomaly", "line_id"?: "..." }` → briefing |
 | GET    | `/reports` | persisted reports (newest first) |
 | GET    | `/audit`   | recent audit records |
+| GET    | `/anomalies` | deterministic scrap-rate anomaly check (no LLM) |
 | GET    | `/metrics/scrap-trend` | daily scrap rate series (chart) |
 | GET    | `/metrics/defects` | top defect codes (chart) |
 | GET    | `/metrics/worst-fpy` | worst first-pass-yield steps (chart) |
@@ -101,9 +105,11 @@ curl -s localhost:8000/report -H 'content-type: application/json' \
 - The agent only ever **reads**. Predefined tools are fixed aggregations from
   `industflow_starter/queries.py`.
 - The `mongo_aggregate` escape hatch passes every pipeline through
-  `safety/sandbox.py`: collection allow-list, stage allow-list, recursive
-  rejection of write/exec stages (`$out`, `$merge`, `$function`, `$where`, …),
-  an always-enforced `$limit`, and a query timeout.
+  `safety/sandbox.py`: collection allow-list, stage allow-list (applied
+  recursively into `$facet` and `$lookup` sub-pipelines), `$lookup` restricted
+  to the same collection allow-list (a join cannot escape into e.g. `ai.audit`),
+  recursive rejection of write/exec stages (`$out`, `$merge`, `$function`,
+  `$where`, …), an always-enforced `$limit`, and a query timeout.
 - Per the brief, the AI **interprets and summarizes** — it does not make
   operational decisions; report wording is advisory.
 
@@ -114,9 +120,16 @@ Swap via `AGENT_MODEL`. `deepseek-r1` is a reasoner (weaker at tool-calling) and
 is not recommended for the agent. Embeddings (`bge-m3`) are reserved for a later
 phase (e.g. defect-sequence clustering, AI_IDEAS.md #3).
 
+## Tests & CI
+
+`uv run pytest` — pure unit tests (no Mongo/LLM needed) for the sandbox, BSON
+serialization, and the anomaly detector. `uv run ruff check .` for lint. Both
+run in GitHub Actions on every push/PR (`.github/workflows/ci.yml`).
+
 ## Roadmap (phased)
 
 - ✅ Phase 1 — tool layer + LLM + sandbox
 - ✅ Phase 2 — narrator + audit + scheduler
 - ✅ Phase 3 — Q&A agent + FastAPI
-- ⬜ Later — embeddings/clustering, real data drop, auth, web chat UI
+- ✅ Phase 4 — statistical anomaly detection, tests + CI
+- ⬜ Later — embeddings/clustering, real data drop, auth

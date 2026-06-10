@@ -12,7 +12,14 @@ import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from ..narrator.report import build_shift_report, build_trend_report
+from ..audit.log import record
+from ..config import SCHEDULER_TZ
+from ..insights.anomaly import scrap_rate_anomalies
+from ..narrator.report import (
+    build_anomaly_report,
+    build_shift_report,
+    build_trend_report,
+)
 
 log = logging.getLogger("industflow_ai.scheduler")
 
@@ -37,9 +44,24 @@ def _run_trend_report() -> None:
         log.exception("trend report failed")
 
 
+def _run_anomaly_check() -> None:
+    """Daily statistical check; a report is only narrated when something fires."""
+    try:
+        detection = scrap_rate_anomalies()
+        if detection.get("findings"):
+            doc = build_anomaly_report(detection)
+            log.info("anomaly report generated: %s", doc.get("_id"))
+        else:
+            record("anomaly_check", result_summary={"findings": 0,
+                   "insufficientData": detection.get("insufficientData", False)})
+            log.info("anomaly check: nothing flagged")
+    except Exception:  # noqa: BLE001
+        log.exception("anomaly check failed")
+
+
 def build_scheduler() -> BackgroundScheduler:
     """Configure (but do not start) the scheduler."""
-    sched = BackgroundScheduler(timezone="Europe/Madrid")
+    sched = BackgroundScheduler(timezone=SCHEDULER_TZ)
     for hour in _SHIFT_REPORT_HOURS:
         sched.add_job(
             _run_shift_report,
@@ -51,6 +73,12 @@ def build_scheduler() -> BackgroundScheduler:
         _run_trend_report,
         CronTrigger(hour=2, minute=0),
         id="trend_report_nightly",
+        replace_existing=True,
+    )
+    sched.add_job(
+        _run_anomaly_check,
+        CronTrigger(hour=6, minute=30),
+        id="anomaly_check_daily",
         replace_existing=True,
     )
     return sched

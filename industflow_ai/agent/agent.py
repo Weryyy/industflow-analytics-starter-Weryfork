@@ -10,7 +10,7 @@ from functools import lru_cache
 from typing import Any
 
 from langchain.agents import create_agent
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 from ..audit.log import record
 from ..config import REPORT_LANG
@@ -47,18 +47,15 @@ def ask(question: str) -> dict[str, Any]:
     result = agent.invoke({"messages": [HumanMessage(question)]})
     messages = result["messages"]
 
-    tools_used = [
-        {"tool": m.name, "args": getattr(m, "artifact", None)}
-        for m in messages if isinstance(m, ToolMessage)
-    ]
-    # The tool name is on the AIMessage tool_calls; collect those too.
+    # Name + arguments of every tool call the model made (for the audit trail).
     tool_calls = [
-        tc.get("name")
+        {"tool": tc.get("name"), "args": tc.get("args")}
         for m in messages if isinstance(m, AIMessage)
         for tc in (m.tool_calls or [])
     ]
     answer = messages[-1].content if messages else ""
 
     record("qa", input=question, tools_used=tool_calls,
-           result_summary={"chars": len(answer)})
-    return {"question": question, "answer": answer, "toolsUsed": tool_calls}
+           result_summary={"answer": answer[:4000], "chars": len(answer)})
+    return {"question": question, "answer": answer,
+            "toolsUsed": [t["tool"] for t in tool_calls]}

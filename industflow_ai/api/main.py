@@ -6,9 +6,10 @@ Endpoints:
     GET  /                    -> redirects to the web UI (/ui/)
     GET  /health             Mongo + Ollama reachability
     POST /ask                natural-language Q&A over production data
-    POST /report             generate a shift|trend briefing
+    POST /report             generate a shift|trend|anomaly briefing
     GET  /reports            list persisted reports
     GET  /audit              recent audit records
+    GET  /anomalies          deterministic scrap-rate anomaly check
     GET  /metrics/*          JSON data for the dashboard charts
 The scheduler starts/stops with the app lifespan.
 """
@@ -29,8 +30,10 @@ from industflow_starter import queries
 from ..agent.agent import ask as agent_ask
 from ..audit.log import recent as recent_audit
 from ..config import AGENT_MODEL, OLLAMA_BASE_URL
+from ..insights.anomaly import scrap_rate_anomalies
 from ..mongo import get_db
 from ..narrator.report import (
+    build_anomaly_report,
     build_shift_report,
     build_trend_report,
     recent_reports,
@@ -39,6 +42,11 @@ from ..scheduler.jobs import build_scheduler
 from ..serialize import jsonable
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+
+
+def _detail(e: Exception) -> str:
+    """Error detail for HTTP responses, bounded (tracebacks live in the logs)."""
+    return str(e)[:300]
 
 
 class UTF8JSONResponse(JSONResponse):
@@ -71,7 +79,7 @@ class AskRequest(BaseModel):
 
 
 class ReportRequest(BaseModel):
-    type: Literal["shift", "trend"] = "shift"
+    type: Literal["shift", "trend", "anomaly"] = "shift"
     line_id: str | None = None
 
 
@@ -101,7 +109,7 @@ def ask(req: AskRequest) -> dict:
     try:
         return agent_ask(req.question)
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail=_detail(e)) from e
 
 
 @app.post("/report")
@@ -109,9 +117,11 @@ def report(req: ReportRequest) -> dict:
     try:
         if req.type == "shift":
             return build_shift_report(line_id=req.line_id)
+        if req.type == "anomaly":
+            return build_anomaly_report()
         return build_trend_report()
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail=_detail(e)) from e
 
 
 @app.get("/reports")
@@ -122,6 +132,12 @@ def reports(limit: int = 20, type: str | None = None) -> dict:
 @app.get("/audit")
 def audit(limit: int = 50) -> dict:
     return {"audit": recent_audit(limit=limit)}
+
+
+@app.get("/anomalies")
+def anomalies() -> dict:
+    """Deterministic scrap-rate anomaly check (no LLM involved)."""
+    return scrap_rate_anomalies()
 
 
 # --------------------------------------------------------------------------- #

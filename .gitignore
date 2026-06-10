@@ -7,7 +7,6 @@ DEFENSE.md
 *.pyc
 *.egg-info/
 .uv-cache/
-uv.lock
 
 # Never commit the data drop or any artifact derived from it.
 data/*.jsonl
