@@ -61,6 +61,12 @@ uv run uvicorn industflow_ai.api.main:app --reload
 # web UI at http://localhost:8000/  (Swagger at /docs)
 ```
 
+**To stop everything:** `Ctrl+C` stops the API (the scheduler shuts down with
+the app lifespan), then `docker compose down` stops MongoDB — the imported data
+persists in the `mongo_data` volume, so the next `docker compose up -d` brings
+it back as-is, no re-import needed. Ollama keeps running on its own (it unloads
+idle models automatically); quit it from the system tray if you want it gone.
+
 ## Web UI
 
 A single-page chat UI is served at **`/`** (→ `/ui/`), built into
