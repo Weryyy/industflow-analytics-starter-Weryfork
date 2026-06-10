@@ -16,5 +16,20 @@ services:
       timeout: 5s
       retries: 5
 
+  # Opt-in (CPU-only) Ollama for machines without a native install:
+  #   docker compose --profile ollama up -d
+  #   docker exec industflow-ollama ollama pull qwen3:14b-q4_K_M
+  # GPU users should prefer the native Ollama install (see AI_LAYER.md).
+  ollama:
+    image: ollama/ollama:latest
+    container_name: industflow-ollama
+    profiles: ["ollama"]
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
 volumes:
   mongo_data:
+  ollama_data:

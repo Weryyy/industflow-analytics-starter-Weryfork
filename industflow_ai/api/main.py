@@ -44,6 +44,11 @@ from ..serialize import jsonable
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
 
+def _detail(e: Exception) -> str:
+    """Error detail for HTTP responses, bounded (tracebacks live in the logs)."""
+    return str(e)[:300]
+
+
 class UTF8JSONResponse(JSONResponse):
     """JSON response that advertises charset=utf-8.
 
@@ -104,7 +109,7 @@ def ask(req: AskRequest) -> dict:
     try:
         return agent_ask(req.question)
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail=_detail(e)) from e
 
 
 @app.post("/report")
@@ -116,7 +121,7 @@ def report(req: ReportRequest) -> dict:
             return build_anomaly_report()
         return build_trend_report()
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail=_detail(e)) from e
 
 
 @app.get("/reports")

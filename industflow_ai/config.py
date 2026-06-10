@@ -31,6 +31,10 @@ READABLE_COLLECTIONS = {
     "defectcode",
 }
 
+# --- Scheduler ---
+# Shift boundaries (06/14/22h) are interpreted in this timezone.
+SCHEDULER_TZ = os.environ.get("SCHEDULER_TZ", "Europe/Madrid")
+
 # --- Audit / reports persistence ---
 AUDIT_COLLECTION = "ai.audit"
 REPORTS_COLLECTION = "ai.reports"

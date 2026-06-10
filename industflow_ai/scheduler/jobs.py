@@ -13,6 +13,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from ..audit.log import record
+from ..config import SCHEDULER_TZ
 from ..insights.anomaly import scrap_rate_anomalies
 from ..narrator.report import (
     build_anomaly_report,
@@ -60,7 +61,7 @@ def _run_anomaly_check() -> None:
 
 def build_scheduler() -> BackgroundScheduler:
     """Configure (but do not start) the scheduler."""
-    sched = BackgroundScheduler(timezone="Europe/Madrid")
+    sched = BackgroundScheduler(timezone=SCHEDULER_TZ)
     for hour in _SHIFT_REPORT_HOURS:
         sched.add_job(
             _run_shift_report,
