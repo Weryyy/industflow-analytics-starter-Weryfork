@@ -17,11 +17,13 @@ no per-token cost, full data privacy (the project brief's "local-first" goal).
 FastAPI (industflow_ai/api)        REST: /ask /report /reports /audit /health
   ├── agent/      LangChain create_agent + ChatOllama; tools wrap queries.py
   │               + mongo_aggregate (sandboxed read-only escape hatch)
-  ├── narrator/   aggregations -> LLM -> advisory briefing (shift | trend)
+  ├── narrator/   aggregations -> LLM -> advisory briefing (shift | trend | anomaly)
+  ├── insights/   deterministic anomaly detection (scrap-rate z-score, no LLM)
   ├── safety/     pipeline allow-list, forced $limit, timeout (read-only)
   ├── audit/      ai.audit — every answer, tool call (with args) and every
   │               mongo_aggregate pipeline (requested + sanitized, incl. rejections)
-  ├── scheduler/  APScheduler — shift reports (14/22/06) + nightly trend
+  ├── scheduler/  APScheduler — shift reports (14/22/06), nightly trend,
+  │               daily anomaly check (narrates a report only when flagged)
   ├── config.py   all settings, env-overridable
   └── mongo.py    pooled DB handle (wraps industflow_starter.db)
 
@@ -81,9 +83,10 @@ language (`REPORT_LANG=en|es`), sandbox limits, baseline windows.
 | GET    | `/`        | web UI (redirects to `/ui/`) |
 | GET    | `/health`  | Mongo + Ollama reachability, model loaded? |
 | POST   | `/ask`     | `{ "question": "..." }` → agent answer + tools used |
-| POST   | `/report`  | `{ "type": "shift"\|"trend", "line_id"?: "..." }` → briefing |
+| POST   | `/report`  | `{ "type": "shift"\|"trend"\|"anomaly", "line_id"?: "..." }` → briefing |
 | GET    | `/reports` | persisted reports (newest first) |
 | GET    | `/audit`   | recent audit records |
+| GET    | `/anomalies` | deterministic scrap-rate anomaly check (no LLM) |
 | GET    | `/metrics/scrap-trend` | daily scrap rate series (chart) |
 | GET    | `/metrics/defects` | top defect codes (chart) |
 | GET    | `/metrics/worst-fpy` | worst first-pass-yield steps (chart) |

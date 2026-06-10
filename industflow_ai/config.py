@@ -38,3 +38,8 @@ REPORTS_COLLECTION = "ai.reports"
 # --- Baseline windows (days) ---
 SHIFT_BASELINE_DAYS = int(os.environ.get("SHIFT_BASELINE_DAYS", "7"))
 TREND_BASELINE_DAYS = int(os.environ.get("TREND_BASELINE_DAYS", "30"))
+
+# --- Anomaly detection (scrap-rate z-score vs the trend baseline) ---
+ANOMALY_Z_THRESHOLD = float(os.environ.get("ANOMALY_Z_THRESHOLD", "2.0"))
+ANOMALY_RECENT_DAYS = int(os.environ.get("ANOMALY_RECENT_DAYS", "3"))
+ANOMALY_MIN_TOTAL = int(os.environ.get("ANOMALY_MIN_TOTAL", "20"))

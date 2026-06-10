@@ -113,7 +113,8 @@ async function generateReport(type) {
     if (!res.ok) {
       addMessage("assistant", `<em>Error:</em> ${escapeHtml(data.detail || "report failed")}`);
     } else {
-      addMessage("report", `<strong>${type === "trend" ? "Trend" : "Shift"} report</strong><br>${formatText(data.text || "")}`);
+      const title = { trend: "Trend", shift: "Shift", anomaly: "Anomaly" }[type] || "Report";
+      addMessage("report", `<strong>${title} report</strong><br>${formatText(data.text || "")}`);
     }
   } catch (e) {
     spin.remove();
