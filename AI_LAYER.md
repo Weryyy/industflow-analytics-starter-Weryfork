@@ -101,9 +101,11 @@ curl -s localhost:8000/report -H 'content-type: application/json' \
 - The agent only ever **reads**. Predefined tools are fixed aggregations from
   `industflow_starter/queries.py`.
 - The `mongo_aggregate` escape hatch passes every pipeline through
-  `safety/sandbox.py`: collection allow-list, stage allow-list, recursive
-  rejection of write/exec stages (`$out`, `$merge`, `$function`, `$where`, …),
-  an always-enforced `$limit`, and a query timeout.
+  `safety/sandbox.py`: collection allow-list, stage allow-list (applied
+  recursively into `$facet` and `$lookup` sub-pipelines), `$lookup` restricted
+  to the same collection allow-list (a join cannot escape into e.g. `ai.audit`),
+  recursive rejection of write/exec stages (`$out`, `$merge`, `$function`,
+  `$where`, …), an always-enforced `$limit`, and a query timeout.
 - Per the brief, the AI **interprets and summarizes** — it does not make
   operational decisions; report wording is advisory.
 
