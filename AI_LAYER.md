@@ -120,9 +120,16 @@ Swap via `AGENT_MODEL`. `deepseek-r1` is a reasoner (weaker at tool-calling) and
 is not recommended for the agent. Embeddings (`bge-m3`) are reserved for a later
 phase (e.g. defect-sequence clustering, AI_IDEAS.md #3).
 
+## Tests & CI
+
+`uv run pytest` — pure unit tests (no Mongo/LLM needed) for the sandbox, BSON
+serialization, and the anomaly detector. `uv run ruff check .` for lint. Both
+run in GitHub Actions on every push/PR (`.github/workflows/ci.yml`).
+
 ## Roadmap (phased)
 
 - ✅ Phase 1 — tool layer + LLM + sandbox
 - ✅ Phase 2 — narrator + audit + scheduler
 - ✅ Phase 3 — Q&A agent + FastAPI
-- ⬜ Later — embeddings/clustering, real data drop, auth, web chat UI
+- ✅ Phase 4 — statistical anomaly detection, tests + CI
+- ⬜ Later — embeddings/clustering, real data drop, auth
