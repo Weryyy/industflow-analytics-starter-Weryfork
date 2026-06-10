@@ -67,6 +67,8 @@ On top of this data layer there's an **AI intelligence layer** (`industflow_ai`)
 that turns the data slice into a production-intelligence assistant — all running
 **locally** (Ollama + LangChain + FastAPI), no cloud, no per-token cost:
 
+![Industflow AI web UI — natural-language Q&A over production data](docs/web-ui.png)
+
 - **Natural-language Q&A** — ask questions in plain language; the agent calls
   read-only tools (the aggregations in `queries.py`) plus a sandboxed
   `mongo_aggregate` escape hatch, and answers with concrete figures.
