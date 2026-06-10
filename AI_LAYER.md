@@ -19,7 +19,8 @@ FastAPI (industflow_ai/api)        REST: /ask /report /reports /audit /health
   │               + mongo_aggregate (sandboxed read-only escape hatch)
   ├── narrator/   aggregations -> LLM -> advisory briefing (shift | trend)
   ├── safety/     pipeline allow-list, forced $limit, timeout (read-only)
-  ├── audit/      ai.audit — every generation/query recorded
+  ├── audit/      ai.audit — every answer, tool call (with args) and every
+  │               mongo_aggregate pipeline (requested + sanitized, incl. rejections)
   ├── scheduler/  APScheduler — shift reports (14/22/06) + nightly trend
   ├── config.py   all settings, env-overridable
   └── mongo.py    pooled DB handle (wraps industflow_starter.db)

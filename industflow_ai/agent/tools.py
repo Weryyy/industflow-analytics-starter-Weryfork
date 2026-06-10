@@ -11,10 +11,12 @@ import json
 
 from bson import ObjectId
 from langchain_core.tools import tool
+from pymongo.errors import PyMongoError
 
 from industflow_starter import queries
+from ..audit.log import record
 from ..mongo import get_db
-from ..safety.sandbox import SandboxError, safe_aggregate
+from ..safety.sandbox import SandboxError, execute_pipeline, validate_pipeline
 from ..serialize import jsonable
 
 
@@ -108,10 +110,21 @@ def mongo_aggregate(collection: str, pipeline: list) -> str:
     stage dicts). Write stages ($out/$merge/$function/$where) are rejected and
     results are capped. Always include deleted:false in your $match.
     """
+    requested = {"collection": collection, "pipeline": jsonable(pipeline)}
     try:
-        rows = safe_aggregate(get_db(), collection, pipeline)
+        sanitized = validate_pipeline(collection, pipeline)
     except SandboxError as e:
+        record("mongo_aggregate", input=requested,
+               result_summary={"rejected": str(e)})
         return json.dumps({"error": str(e)})
+    try:
+        rows = execute_pipeline(get_db(), collection, sanitized)
+    except PyMongoError as e:
+        record("mongo_aggregate", input=requested,
+               pipelineExecuted=sanitized, result_summary={"error": str(e)})
+        return json.dumps({"error": str(e)})
+    record("mongo_aggregate", input=requested,
+           pipelineExecuted=sanitized, result_summary={"rows": len(rows)})
     return _dump(rows)
 
 
